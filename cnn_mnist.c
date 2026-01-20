@@ -83,8 +83,7 @@ int main() {
     
     float in_scale = tflm_input_scale();
     int   in_zp    = tflm_input_zero_point();
-    // float out_scale = tflm_output_scale(); // Removido pois não vamos usar confiança
-    // int   out_zp    = tflm_output_zero_point(); // Removido pois não vamos usar confiança
+   
 
     uint8_t raw_buffer[IMAGE_SIZE];
     int buffer_index = 0;
