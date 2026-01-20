@@ -1,213 +1,132 @@
-# CNN MNIST (INT8) no RP2040 / Raspberry Pi Pico W (TensorFlow Lite Micro)
+<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=02A6F4&height=120&section=header"/>
 
-Implementação de **inferência embarcada** de uma **CNN quantizada em INT8** treinada no **MNIST**, executando em **RP2040 (Pico W)** usando **TensorFlow Lite Micro (TFLM)** via **pico-tflmicro** (submódulo/pasta vendorizada no repositório).
+<h1 align="center">TinyML MNIST no Raspberry Pi Pico W</h1>
 
-> **Objetivo:** demonstrar um pipeline TinyML completo: modelo **.tflite** convertido para array C (`mnist_cnn_int8_model.h`), entrada de amostra (`mnist_sample.h`), execução do interpretador TFLM no RP2040 e impressão/telemetria via USB.
+<p align="center">
+  <strong>Inferência de Dígitos Manuscritos (MNIST) com Rede Neural Convolucional INT8 embarcada no RP2040</strong>
+</p>
 
----
-
-## Principais recursos
-
-- ✅ **Modelo CNN INT8** (quantizado) para classificação de dígitos `0–9`
-- ✅ Execução em **baremetal** no **RP2040** (Pico SDK)
-- ✅ Integração com **pico-tflmicro** (TFLM + CMSIS-NN habilitado quando disponível)
-- ✅ Exemplo de **entrada em C** (`mnist_sample.h`) para teste rápido sem sensores/câmera
-- ✅ Estrutura pronta para substituir amostras e/ou trocar o modelo
-
----
-
-## Estrutura do repositório (arquivos anexos)
-
-- `cnn_mnist.c`  
-  Código da aplicação (loop principal, preparação de entrada, chamada do wrapper e leitura da saída).
-- `tflm_wrapper.h` / `tflm_wrapper.cpp`  
-  Wrapper para encapsular a inicialização do TFLM (model → interpreter → tensor arena) e a inferência (`invoke`).
-- `mnist_cnn_int8_model.h`  
-  Array C com o modelo TFLite **INT8** (ex.: `const unsigned char ...[]`).
-- `mnist_sample.h`  
-  Amostra(s) de entrada (imagem 28×28) em formato compatível com o modelo.
-- `CMakeLists.txt`  
-  Build do projeto com Pico SDK + pico-tflmicro.
-- `pico_sdk_import.cmake`  
-  Import padrão do Pico SDK (conforme templates oficiais do SDK).
+<p align="center">
+  <a href="#-objetivos-do-projeto">Objetivos</a> •
+  <a href="#-tecnologias-utilizadas">Tecnologias</a> •
+  <a href="#-fluxo-de-trabalho-e-arquitetura">Arquitetura</a> •
+  <a href="#-compilação-e-execução">Como Executar</a> •
+  <a href="#-autoria">Autoria</a>
+</p>
 
 ---
 
-## Requisitos
+## 🎥 Demonstrações do Projeto
 
-### Software
-- **Windows 10/11** (ou Linux/macOS)  
-- **Pico SDK** configurado (no seu caso: `~/.pico-sdk/sdk/2.2.0`)
-- Toolchain **arm-none-eabi-gcc** (no seu log: `14_2_Rel1`)
-- **CMake** + **Ninja** (recomendado no Windows)
-- (Opcional) **picotool** para gerar `.uf2`
+🔹 **Vídeo de Demonstração – Projeto em Funcionamento (Pico W + OLED + IA)** 👉 [Clique aqui para assistir](https://www.youtube.com/SEU_VIDEO_DE_DEMONSTRACAO)
 
-### Hardware
-- **Raspberry Pi Pico W** (ou Pico; ajuste `PICO_BOARD` conforme necessário)
-- Cabo USB para gravação/Serial (CDC)
+🔹 **Notebook Google Colab – Treinamento, Avaliação e Conversão do Modelo** 👉 [Acessar Notebook](https://colab.research.google.com/drive/1mdFMdALq4t6T3cWZ-w8TESXvitqpyevu?usp=sharing)
 
 ---
 
-## Como compilar (Windows / PowerShell)
+## 🎯 Objetivos do Projeto
 
-> A forma mais previsível é criar uma pasta `build` **curta** (e, no Windows, evitar caminhos longos).
+O objetivo central deste projeto é demonstrar a implementação completa de um pipeline de **TinyML**, partindo do treinamento de um modelo em ambiente de alto desempenho até sua execução embarcada em um microcontrolador com recursos limitados (Edge AI).
 
-1) Abra um PowerShell no diretório do projeto:
+Os principais objetivos são:
 
-```powershell
-cd "\cnn_mnist"
-if (Test-Path .\build) { Remove-Item -Recurse -Force .\build }
-mkdir build
-cd build
-```
-
-2) Configure o build com Ninja (Pico W):
-
-```powershell
-cmake -G Ninja -DPICO_BOARD=pico_w ..
-```
-
-3) Compile:
-
-```powershell
-ninja
-```
-
-Se tudo estiver correto, serão gerados:
-- `cnn_mnist.elf`
-- `cnn_mnist.uf2`
-- `cnn_mnist.bin` / `cnn_mnist.hex` / `cnn_mnist.dis`
+1.  Treinar uma **Rede Neural Convolucional (CNN)** para classificação do dataset MNIST.
+2.  Converter o modelo treinado para **TensorFlow Lite**.
+3.  Aplicar **quantização INT8** (pós-treinamento) para otimização embarcada.
+4.  Executar inferência local no **Raspberry Pi Pico W (RP2040)**.
+5.  Implementar comunicação **PC ↔ Microcontrolador** via USB Serial.
+6.  Exibir a predição em um **display OLED SSD1306**.
 
 ---
 
-## Gravar no Pico W
+## 🧠 Dataset e Modelo
 
-1) Coloque o Pico W em modo BOOTSEL (segure **BOOTSEL** e conecte o USB).  
-2) Copie o arquivo `cnn_mnist.uf2` para o drive `RPI-RP2`.
+### O Dataset: MNIST
+* **Conteúdo:** Imagens de dígitos manuscritos (0 a 9).
+* **Formato:** Tons de cinza.
+* **Resolução:** $28 \times 28$ pixels (Total: 784 pixels).
+* **Entrada no Hardware:** Vetor *raw* (uint8), sem cabeçalhos ou compressão.
 
----
-
-## Monitor serial (USB)
-
-- Se o projeto estiver com **stdio USB** habilitado, use:
-  - Windows: PuTTY / TeraTerm / Arduino Serial Monitor / VSCode Serial Monitor
-  - Linux/macOS: `screen /dev/ttyACM0 115200` (ou equivalente)
-
-> Em muitos exemplos do Pico SDK, o baudrate não importa para USB CDC, mas mantenha `115200` por padrão.
-
----
-
-## Detalhes do modelo (MNIST)
-
-O MNIST usa imagens **28×28** em escala de cinza. Para CNNs quantizadas em INT8, normalmente o fluxo é:
-
-1. Entrada original: `uint8` (0–255) ou `float` (0–1)
-2. Quantização: `int8` usando `scale` e `zero_point` do tensor de entrada
-
-**Importante:** a pré-processamento correto depende do *input tensor* do modelo:
-- Se o tensor de entrada for `int8`, você deve quantizar a imagem para `int8`.
-- Se for `uint8`, deve manter `uint8`.
-- Se for `float32`, deve normalizar para `float`.
-
-✅ **Dica prática:** verifique no wrapper (ou via `interpreter->input(0)->type` e parâmetros) qual é o tipo e como mapear a amostra.
+### O Modelo: CNN + Quantização
+O treinamento foi realizado no **Google Colab** utilizando TensorFlow/Keras.
+* **Etapas:** Carregamento $\to$ Normalização (0-1) $\to$ Treinamento CNN $\to$ Avaliação.
+* **Conversão:** O modelo foi exportado para **TensorFlow Lite (.tflite)**.
+* **Otimização:** Aplicada quantização **INT8** com *representative dataset* para garantir compatibilidade com o hardware.
+* **Formato Final:** O arquivo `.tflite` foi convertido para um array hexadecimal C (`mnist_cnn_int8_model.h`) para inclusão direta no firmware.
 
 ---
 
-## API do wrapper (tflm_wrapper)
+## 🛠️ Tecnologias Utilizadas
 
-O wrapper existe para esconder a “complexidade” padrão do TFLM:
+### 🔹 Hardware
+* **Microcontrolador:** Raspberry Pi Pico W (RP2040)
+* **Display:** OLED SSD1306 (128×64)
+* **Interface:** I²C (Display) e USB Serial (Comunicação com PC)
 
-- carregar o modelo (`tflite::GetModel(...)`)
-- criar o `tflite::MicroInterpreter`
-- alocar tensores (`AllocateTensors`)
-- mapear `input` e `output`
-- executar a inferência (`Invoke`)
+### 🔹 Software & Firmware
+* **Linguagem:** C / C++ (Pico SDK)
+* **Framework ML:** TensorFlow Lite for Microcontrollers (TFLM)
+* **IDE/Compilador:** VS Code, CMake, GCC ARM
 
-### Interface sugerida (padrão)
-> O cabeçalho/implementação anexos estão com *trechos indicativos* (reticências `...`). A ideia típica é algo como:
-
-- `bool tflm_init();`
-- `bool tflm_invoke(const int8_t* in, int8_t* out);`
-- ou uma versão que retorna ponteiros para `input()`/`output()`
-
-Se você padronizar assim, o `cnn_mnist.c` fica limpo e fácil de adaptar para novos modelos.
+### 🔹 Interface PC (Host)
+* **Linguagem:** Python 3
+* **Bibliotecas:** PySerial, NumPy, TensorFlow/Keras
 
 ---
 
-## Troubleshooting (erros comuns do seu log)
+## 🔄 Fluxo de Trabalho e Arquitetura
 
-### 1) `fatal error: opening dependency file ... .obj.d: No such file or directory`
-Isso é **clássico de Windows + caminho longo** (limite de path) durante builds grandes (como CMSIS-NN + testes).
+O sistema opera através da interação entre um script Python no computador e o firmware no RP2040.
 
-**Correções recomendadas (faça pelo menos uma):**
-- ✅ Mover o projeto para um caminho curto, ex.: `C:\p\cnn_mnist`
-- ✅ Habilitar **Win32 long paths** no Windows (Política/Registro)
-- ✅ Evitar compilar **tests/benchmarks** do pico-tflmicro no build do seu app
+### 1. 🐍 Script Python (`enviar_imagem.py`)
+Atua como a interface de entrada de dados.
+1.  Carrega o dataset MNIST.
+2.  Seleciona uma imagem aleatória.
+3.  Converte a imagem para um vetor de **784 bytes**.
+4.  Envia os dados (0-255) via **USB Serial**.
+5.  Aguarda e exibe a resposta da inferência vinda do Pico W.
 
-### 2) Muitos warnings de `CMAKE_OBJECT_PATH_MAX` e “build may not work”
-Não são erros por si só, mas indicam que o caminho está no limite — e costuma levar ao erro do item (1).  
-Solução: **caminho curto** + **desativar testes**.
-
-### 3) `cannot find -lpico_tflmicro`
-Isso ocorre quando o CMake tenta linkar com uma lib chamada `pico_tflmicro`, mas o alvo real no `pico-tflmicro` tem outro nome (varia por fork/versão) **ou a biblioteca não foi adicionada ao build**.
-
-✅ Solução: detectar o target correto do pico-tflmicro e linkar pelo **nome do TARGET** (não por `-l...` manual).
-
-> Uma versão robusta do `CMakeLists.txt` costuma:
-- `add_subdirectory(pico-tflmicro pico-tflmicro-build EXCLUDE_FROM_ALL)`
-- localizar o alvo real (ex.: `pico_tflmicro`, `pico-tflmicro`, etc.)
-- `target_link_libraries(cnn_mnist PRIVATE ${TFLM_TARGET})`
-
-### 4) `PICO_DEFAULT_LED_PIN was not declared`
-Esse erro veio de exemplos do pico-tflmicro (ex.: `examples/hello_world/...`) que assumem LED “default” definido no board.
-
-✅ Solução: **não compilar exemplos/testes do pico-tflmicro** junto do seu app, ou ajustar o exemplo.
+### 2. ⚙️ Firmware Embarcado (`cnn_mnist.c`)
+Responsável pela inteligência local.
+1.  **Inicialização:** Configura USB, I²C, Display OLED e o interpretador TFLM.
+2.  **Recepção:** Recebe os 784 bytes da imagem.
+3.  **Pré-processamento:**
+    * Normalização: `pixel_norm = pixel / 255.0`
+    * Quantização: Converte float para INT8 conforme os parâmetros do modelo.
+4.  **Inferência:** Executa `tflm_invoke()` na CNN.
+5.  **Pós-processamento:** Identifica a classe com maior probabilidade (*argmax*).
+6.  **Saída:**
+    * Envia `Predito: X` via Serial para o PC.
+    * Desenha o dígito e o resultado no Display OLED.
 
 ---
 
-## Recomendações de build (CMake) para evitar testes do pico-tflmicro
+## 🚀 Compilação e Execução
 
-Para builds no Windows, é altamente recomendável **desativar testes/benchmarks** do pico-tflmicro.  
-Exemplo de flags típicas (dependem do fork):
-
-```cmake
-set(PICO_TFLMICRO_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(PICO_TFLMICRO_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(PICO_TFLMICRO_BUILD_BENCHMARKS OFF CACHE BOOL "" FORCE)
-```
-
-Além disso, use `EXCLUDE_FROM_ALL` ao adicionar o subdiretório:
-
-```cmake
-add_subdirectory(pico-tflmicro pico-tflmicro-build EXCLUDE_FROM_ALL)
-```
+### Pré-requisitos
+* Pico SDK instalado e configurado.
+* Python 3 instalado no computador.
 
 ---
 
-## Como trocar a amostra / testar outros dígitos
+## 🚀 Execução do Projeto
 
-1) Substitua o conteúdo de `mnist_sample.h` por outra imagem 28×28.
-2) Garanta que o formato está compatível com o tensor de entrada do modelo:
-   - `int8` com quantização correta, ou
-   - `uint8`, ou
-   - `float32` normalizado.
+### Pré-requisitos
+* Firmware (`.uf2`) já carregado no Raspberry Pi Pico W.
+* Python 3 instalado.
 
-Sugestão: mantenha um script Python/Colab para:
-- carregar uma imagem MNIST
-- aplicar o mesmo pré-processamento do treino
-- exportar para `.h` (array C) já no tipo correto do modelo
+### Executar o Script Python
+Identifique a porta serial e execute:
 
----
 
-## Créditos e referências
+# Instalação das dependências
+```bash pip install pyserial numpy tensorflow ```
 
-- Raspberry Pi Pico SDK (RP2040)
-- TensorFlow Lite Micro (TFLM)
-- CMSIS-NN (otimizações para kernels INT8)
+# Execução da interface
+```bash python enviar_imagem.py ```
 
----
+🎯 Resultado Esperado
 
-## Contato / manutenção
+No Terminal: [Pico W Disse]: Predito: 7
 
-- Autor: Ricardo Menezes Prates (UNIVASF)  
-- Objetivo educacional - Embarcatech.
+No OLED: Mensagem "PREDICAO: 7" com interface gráfica.
