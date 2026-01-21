@@ -18,7 +18,7 @@
 
 ## 🎥 Demonstrações do Projeto
 
-🔹 **Vídeo de Demonstração – Projeto em Funcionamento (Pico W + OLED + IA)** 👉 [Clique aqui para assistir](https://www.youtube.com/SEU_VIDEO_DE_DEMONSTRACAO)
+🔹 **Vídeo de Demonstração – Projeto em Funcionamento (Pico W + OLED + IA)** 👉 [Clique aqui para assistir](https://youtu.be/yJ6XPsIjuSo?si=08x0C2GUyspmLZWa)
 
 🔹 **Notebook Google Colab – Treinamento, Avaliação e Conversão do Modelo** 👉 [Acessar Notebook](https://colab.research.google.com/drive/1mdFMdALq4t6T3cWZ-w8TESXvitqpyevu?usp=sharing)
 
